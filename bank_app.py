@@ -21,6 +21,20 @@ def start_up():
                        
 """)
         
+    with sqlite3.connect(DB_NAME) as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+           CREATE TABLE IF NOT EXISTS transactions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                transaction_type TEXT NOT NULL CHECK(transaction_type <> ''),
+                amount INTEGER CHECK(amount > 0),
+                transaction_date TEXT NOT NULL,
+                recipient_acc TEXT,
+
+                FOREIGN KEY (user_id) REFERENCES customers(id)
+            );
+""")
     
 # ______________________________________________________Validation Section________________________________________
 
@@ -91,6 +105,7 @@ def open_account():
             else:
                 print("A user with those details already exists")
             return
+    print("***************************************************")
 
 # _________________________________________________________Login Section_________________________________________________
 
@@ -118,6 +133,7 @@ def login():
             dashboard(user_id, username)
         else:
             print("Invalid credentials")
+    print("***************************************************")
 
 # _____________________________________________________________Dashboard Section_____________________________________
 
@@ -194,6 +210,13 @@ def withdraw(user_id, username):
             "UPDATE customers SET initial_balance = ? WHERE username = ?",
             (new_balance, username)
         )
+    with sqlite3.connect(DB_NAME) as conn:
+        conn.execute("PRAGMA foreign_keys = ON")
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO transactions (user_id, transaction_type, amount, transaction_date)
+            VALUES (?, ?, ?, datetime('now'))
+            """, (user_id, "Withdraw", amount))
 
         print(f"Withdrawal successful. New balance: ₦{new_balance}")
 
@@ -232,6 +255,14 @@ def deposit(user_id, username):
             (new_balance, username)
         )
 
+    with sqlite3.connect(DB_NAME) as conn:
+        conn.execute("PRAGMA foreign_keys = ON")
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO transactions (user_id, transaction_type, amount, transaction_date)
+            VALUES (?, ?, ?, datetime('now'))
+            """, (user_id, "Depsit", amount))
+
         print(f"Deposit successful. New balance: ₦{new_balance}")
     print("***************************************************")
 
@@ -254,15 +285,17 @@ def balance_enquiry(user_id, username):
 
 def transfer(user_id, username):
     try:
-        account_num = int(input("Enter the receiver account number: ")).strip()
+        account_num = int(input("Enter the receiver account number: "))
         amount = int(input("Enter amount you want to send: "))
     except ValueError:
         print("You Entered an invalid details")
+    except TypeError:
+        print("You entered a non valid ")
 
     if amount <= 0:
         print("Withdrawal amount must be greater than 0")
         return
-
+    
     with sqlite3.connect(DB_NAME) as conn:
         cursor = conn.cursor()
 
@@ -272,10 +305,45 @@ def transfer(user_id, username):
         ).fetchone()
 
         if balance is None:
-            print("User not found")
+            print("user not found")
             return
-
         current_balance = balance[0]
+        deduct_balance = current_balance - amount
+
+        cursor.execute(
+            "UPDATE customers SET initial_balance = ? WHERE username = ?",
+            (deduct_balance, username)
+        )
+
+        
+    with sqlite3.connect(DB_NAME) as conn:
+        cursor = conn.cursor()
+
+        new_balance = cursor.execute(
+            "SELECT initial_balance FROM customers WHERE account_number = ?",
+            (account_num,)
+        ).fetchone()
+
+        added_balance = new_balance[0]
+        added_amount = amount + added_balance
+
+        cursor.execute(
+            "UPDATE customers SET initial_balance = ? WHERE account_number = ?",
+            (added_amount, account_num)
+        )
+
+    with sqlite3.connect(DB_NAME) as conn:
+        cursor = conn.cursor()
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO transactions (user_id, transaction_type, amount, transaction_date, recipient_acc)
+            VALUES (?, ?, ?, datetime('now'), ?)
+            """, (user_id, "Transfer", amount, account_num ))
+        
+    print(f"{amount} sent to {account_num} is successfull!!!!!!")
+    
+
+    print("*************************************************************************")
 
         
 
@@ -292,7 +360,7 @@ def account_details(user_id, username):
         full_name, username, balance, account_number = account_info
     print(f"Your name: {full_name}")
     print(f"Your username: {username}")
-    print(f"Your current balance: {balance}")
+    print(f"Your current balance: ₦{balance}")
     print(f"Your account number is: {account_number}")
 
     print("***************************************************")
