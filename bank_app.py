@@ -1,7 +1,7 @@
 import sqlite3
 import hashlib
 import random 
-
+import time
 from getpass import getpass
 
 DB_NAME = "bank.db"
@@ -12,7 +12,7 @@ def start_up():
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS customers (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                full_name TEXT NOT NULL CHECK(full_name <> ''),
+                full_name TEXT NOT NULL CHECK(LENGTH(full_name) >= 4 AND LENGTH(full_name) <= 255),
                 username TEXT NOT NULL UNIQUE CHECK(username <> ''),
                 password TEXT NOT NULL CHECK(password <> ''),
                 initial_balance INTEGER CHECK(initial_balance <> ''),
@@ -56,6 +56,10 @@ def open_account():
 
     while True:
         password = getpass("Enter your password: ").strip()
+        if len(password) < 8 or len(password) > 30:
+            print("The password most not be less than 8 and not greater than 30 ")
+            continue
+
         if not password:
             print("Password is required.")
             continue
@@ -68,13 +72,17 @@ def open_account():
 
 
     while True:
-        initial_balance = int(input("Enter amount to open account: "))
-
-        if initial_balance < 2000:
-            print("Amount most be ₦2000 and above")
+        try:
+            initial_balance = int(input("Enter amount to open account: "))
+        except ValueError:
+            print("Amount most not be a non_numberic value")
             continue
-        elif initial_balance < 0:
-            print("Amount most not be in nagative value")
+
+        if initial_balance < 0:
+            print("Amount most not be in negative value")
+            continue
+        elif initial_balance < 2000:
+            print("Amount most be ₦2000 and above")
             continue
         elif initial_balance >= 2000:
             print("Opening balance Successfully deposited")
@@ -82,7 +90,7 @@ def open_account():
 
     def gen_account_number():
         while True:
-            account_number = str(random.randint(1000000000, 9999999999))  # 10-digit number
+            account_number = str(random.randint(10000000, 99999999))  # 10-digit number
             
             with sqlite3.connect(DB_NAME) as conn:
                 cursor = conn.cursor()
@@ -105,6 +113,9 @@ def open_account():
             else:
                 print("A user with those details already exists")
             return
+        print("Verifying account...")
+        time.sleep(5)
+        print(f"account is open successfully!!! welcome to Firstbank {first_name} ")
     print("***************************************************")
 
 # _________________________________________________________Login Section_________________________________________________
@@ -129,6 +140,10 @@ def login():
 
         if user is not None:
             user_id = user[0]
+            print("Verifying account...")
+            time.sleep(3)
+            print("Connecting to bank server...")
+            time.sleep(5)
             print("Login Successful")
             dashboard(user_id, username)
         else:
@@ -217,7 +232,17 @@ def withdraw(user_id, username):
             INSERT INTO transactions (user_id, transaction_type, amount, transaction_date)
             VALUES (?, ?, ?, datetime('now'))
             """, (user_id, "Withdraw", amount))
+        print("Connecting to bank server...")
+        time.sleep(1)
 
+        print("Verifying account...")
+        time.sleep(2)
+
+        print("Processing withdrawal...")
+        time.sleep(2)
+
+        print("Dispensing cash...")
+        time.sleep(1)
         print(f"Withdrawal successful. New balance: ₦{new_balance}")
 
     print("***************************************************")
@@ -262,9 +287,33 @@ def deposit(user_id, username):
             INSERT INTO transactions (user_id, transaction_type, amount, transaction_date)
             VALUES (?, ?, ?, datetime('now'))
             """, (user_id, "Depsit", amount))
-
+        print("Connecting to bank server...")
+        time.sleep(1)
+        print("Processing deposit...")
+        time.sleep(2)
         print(f"Deposit successful. New balance: ₦{new_balance}")
     print("***************************************************")
+
+# _____________________________________________________________Transaction History Section_____________________________________
+
+
+def trans_history(user_id, username):
+    with sqlite3.connect(DB_NAME) as conn:
+        cursor = conn.cursor()
+
+        transactions = cursor.execute(
+            "SELECT transaction_type, amount, transaction_date, recipient_acc FROM transactions WHERE user_id = ?",
+            (user_id,)
+        ).fetchall()
+        for transact in transactions:
+            transaction_type, amount, transaction_date, recipient_acc = transact
+            result = f"Transaction type: {transaction_type}, amount: {amount}, Date: {transaction_date}, recipient {recipient_acc}."
+            print("Connecting to bank server...")
+            time.sleep(1)
+            print("Processing history...")
+            time.sleep(2)
+            print(result)
+                
 
 # _____________________________________________________________Balance Enquiry Section_____________________________________
 
@@ -277,6 +326,14 @@ def balance_enquiry(user_id, username):
             (username,)
         ).fetchone()
         new_balance = balance[0]
+        print("Connecting to bank server...")
+        time.sleep(1)
+
+        print("Verifying account...")
+        time.sleep(2)
+
+        print("Fetching Balance...")
+        time.sleep(3)
         print(f"Your account Balance is ₦{new_balance}")
 
     print("***************************************************")
@@ -290,7 +347,7 @@ def transfer(user_id, username):
     except ValueError:
         print("You Entered an invalid details")
     except TypeError:
-        print("You entered a non valid ")
+        print("You entered a non valid details ")
 
     if amount <= 0:
         print("Withdrawal amount must be greater than 0")
@@ -357,6 +414,7 @@ def account_details(user_id, username):
             "SELECT full_name, username, initial_balance, account_number FROM customers WHERE username = ?",
             (username,)
         ).fetchone()
+
         full_name, username, balance, account_number = account_info
     print(f"Your name: {full_name}")
     print(f"Your username: {username}")
