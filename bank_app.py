@@ -243,7 +243,7 @@ def withdraw(user_id, username):
 
         print("Dispensing cash...")
         time.sleep(1)
-        print(f"Withdrawal successful. New balance: ₦{new_balance}")
+        print(f"Your Withdrawal of {amount} successful. New balance: ₦{new_balance}")
 
     print("***************************************************")
 
@@ -360,6 +360,19 @@ def transfer(user_id, username):
             "SELECT initial_balance FROM customers WHERE username = ?",
             (username,)
         ).fetchone()
+
+    with sqlite3.connect(DB_NAME) as conn:
+        cursor = conn.cursor()
+
+        your_acc_no = cursor.execute(
+            "SELECT account_number FROM customers WHERE username = ?",
+            (username,)
+        ).fetchone()
+
+        if your_acc_no[0] == account_num:
+            time.sleep(3)
+            print("You can not make transaction to your account!!!")
+            return
 
         if balance is None:
             print("user not found")
