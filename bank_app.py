@@ -17,7 +17,7 @@ def start_up():
                 password TEXT NOT NULL CHECK(password <> ''),
                 initial_balance INTEGER CHECK(initial_balance <> ''),
                 account_number INTEGER CHECK(account_number <> '')
-            );
+            ); 
                        
 """)
         
@@ -90,7 +90,7 @@ def open_account():
 
     def gen_account_number():
         while True:
-            account_number = str(random.randint(10000000, 99999999))  # 10-digit number
+            account_number = str(random.randint(10000000, 99999999))
             
             with sqlite3.connect(DB_NAME) as conn:
                 cursor = conn.cursor()
@@ -171,7 +171,8 @@ def dashboard(user_id, username):
             withdraw(user_id, username)
         elif choice == "2":
             deposit(user_id, username)
-        elif choice == "3":
+        elif choice == "3": 
+            print("is this an error")
             trans_history(user_id, username)
         elif choice == "4":
             balance_enquiry(user_id, username)
@@ -305,6 +306,11 @@ def trans_history(user_id, username):
             "SELECT transaction_type, amount, transaction_date, recipient_acc FROM transactions WHERE user_id = ?",
             (user_id,)
         ).fetchall()
+
+        if not transactions:
+            print("no transactions yet")
+            return 
+
         for transact in transactions:
             transaction_type, amount, transaction_date, recipient_acc = transact
             result = f"Transaction type: {transaction_type}, amount: {amount}, Date: {transaction_date}, recipient {recipient_acc}."
@@ -312,7 +318,7 @@ def trans_history(user_id, username):
             time.sleep(1)
             print("Processing history...")
             time.sleep(2)
-            print(result)
+            print(result) 
                 
 
 # _____________________________________________________________Balance Enquiry Section_____________________________________
@@ -374,8 +380,8 @@ def transfer(user_id, username):
             print("You can not make transaction to your account!!!")
             return
 
-        if balance is None:
-            print("user not found")
+        if balance[0] < amount:
+            print("insufficient balance")
             return
         current_balance = balance[0]
         deduct_balance = current_balance - amount
